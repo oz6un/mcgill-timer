@@ -1,0 +1,15 @@
+{
+  "name": "McGill Big 3 Timer",
+  "short_name": "McGill Timer",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231a1a2e' width='100' height='100' rx='20'/><text x='50' y='58' text-anchor='middle' font-size='50' font-family='system-ui' dominant-baseline='middle' fill='%234ecca3'>M3</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
