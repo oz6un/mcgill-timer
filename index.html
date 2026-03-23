@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" id="meta-theme" content="#111318">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
@@ -12,17 +12,19 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #1a1a2e;
+    --bg: #111318;
     --fg: #f0f0f0;
+    --fg-dim: rgba(255,255,255,0.4);
     --accent: #4ecca3;
-    --work-bg: #0a4a32;
-    --work-fg: #4eff9e;
-    --rest-bg: #4a3a0a;
-    --rest-fg: #ffd04a;
-    --trans-bg: #0a2a4a;
-    --trans-fg: #4a9eff;
-    --done-bg: #3a0a4a;
-    --done-fg: #d04aff;
+
+    --hold-bg: #0a2e1a;
+    --hold-fg: #00ff7f;
+    --rest-bg: #2e1f0a;
+    --rest-fg: #ffb830;
+    --trans-bg: #0a1a2e;
+    --trans-fg: #5090ff;
+    --done-bg: #1e0a2e;
+    --done-fg: #c060ff;
   }
 
   body {
@@ -35,62 +37,101 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: background 0.5s;
+    transition: background 0.4s;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  body.state-work       { background: var(--work-bg); }
+  body.state-work       { background: var(--hold-bg); }
   body.state-rest       { background: var(--rest-bg); }
   body.state-transition { background: var(--trans-bg); }
   body.state-done       { background: var(--done-bg); }
+
+  /* ── Animations ────────────────────────────────── */
+  @keyframes pop {
+    0%   { transform: scale(0.88); opacity: 0.6; }
+    50%  { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(1.06); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pop { animation: pop 0.3s ease-out; }
+  .urgent { animation: pulse 0.6s ease-in-out infinite; }
 
   /* ── Start screen ──────────────────────────────── */
   #start-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: clamp(1.2rem, 4vh, 2rem);
     padding: 1.5rem;
+    animation: fade-in 0.5s ease-out;
   }
 
   h1 {
-    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-size: clamp(1.8rem, 6vw, 2.6rem);
     font-weight: 800;
-    letter-spacing: -0.5px;
+    letter-spacing: -1px;
     text-align: center;
   }
 
   .subtitle {
     font-size: clamp(0.85rem, 2.5vw, 1rem);
-    opacity: 0.5;
-    margin-top: 0.25rem;
+    opacity: 0.4;
+    margin-top: 0.2rem;
     text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
   }
 
-  .config {
+  .exercise-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    font-size: clamp(0.8rem, 2.5vw, 0.95rem);
-    opacity: 0.6;
+    gap: 0.35rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    font-size: clamp(0.82rem, 2.5vw, 0.95rem);
+    opacity: 0.7;
     text-align: center;
     line-height: 1.6;
   }
 
+  .config-row {
+    font-size: clamp(0.82rem, 2.5vw, 0.95rem);
+    opacity: 0.5;
+    text-align: center;
+  }
+
+  .est-time {
+    font-size: clamp(0.9rem, 2.8vw, 1.05rem);
+    opacity: 0.35;
+  }
+
   .big-btn {
-    width: clamp(130px, 36vw, 170px);
-    height: clamp(130px, 36vw, 170px);
+    width: clamp(120px, 34vw, 160px);
+    height: clamp(120px, 34vw, 160px);
     border-radius: 50%;
-    border: 4px solid var(--accent);
+    border: 3px solid var(--accent);
     background: transparent;
     color: var(--accent);
-    font-size: clamp(1.3rem, 4vw, 1.7rem);
+    font-size: clamp(1.2rem, 3.5vw, 1.5rem);
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
   }
 
   .big-btn:active {
@@ -107,195 +148,183 @@
     justify-content: center;
     width: 100%;
     height: 100%;
-    padding: 1rem 1rem 0;
     position: relative;
     cursor: pointer;
-    gap: 0;
+    padding: 0.5rem 1rem;
   }
 
-  /* Phase label — THE most visible element after the number */
-  #phase-label {
-    font-size: clamp(1.2rem, 4.5vw, 1.6rem);
-    font-weight: 800;
+  /* Round pill — top */
+  #round-pill {
+    font-size: clamp(0.7rem, 2.2vw, 0.85rem);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 6px;
-    transition: color 0.4s;
-    margin-bottom: 0.3rem;
+    letter-spacing: 2px;
+    opacity: 0.4;
+    padding: 0.25rem 0.8rem;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: clamp(0.5rem, 2vh, 1.2rem);
   }
-
-  body.state-work #phase-label       { color: var(--work-fg); }
-  body.state-rest #phase-label       { color: var(--rest-fg); }
-  body.state-transition #phase-label { color: var(--trans-fg); }
 
   /* Exercise name */
   #exercise-name {
-    font-size: clamp(1.5rem, 5.5vw, 2.2rem);
+    font-size: clamp(1.3rem, 5vw, 2rem);
     font-weight: 700;
     text-align: center;
-    min-height: 2.5rem;
-    margin-bottom: 0.5rem;
+    min-height: 1.8rem;
+    margin-bottom: clamp(0.2rem, 1vh, 0.5rem);
+    transition: font-size 0.3s;
   }
 
-  /* Ring */
-  .timer-ring-wrap {
-    position: relative;
-    width: clamp(180px, 52vw, 280px);
-    height: clamp(180px, 52vw, 280px);
-    flex-shrink: 0;
+  /* During transition, exercise name is the hero */
+  body.state-transition #exercise-name {
+    font-size: clamp(1.8rem, 7vw, 3rem);
+    color: var(--trans-fg);
   }
 
-  .timer-ring-wrap svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-
-  .ring-bg {
-    fill: none;
-    stroke: rgba(255,255,255,0.08);
-    stroke-width: 8;
-  }
-
-  .ring-fg {
-    fill: none;
-    stroke: var(--accent);
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke 0.4s;
-  }
-
-  body.state-work .ring-fg       { stroke: var(--work-fg); }
-  body.state-rest .ring-fg       { stroke: var(--rest-fg); }
-  body.state-transition .ring-fg { stroke: var(--trans-fg); }
-  body.state-done .ring-fg       { stroke: var(--done-fg); }
-
+  /* THE NUMBER — massive, hero element */
   #timer-number {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(3.5rem, 14vw, 5.5rem);
+    font-size: clamp(7rem, 28vw, 14rem);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -2px;
+    text-shadow: 0 2px 30px rgba(0,0,0,0.3);
+    transition: color 0.4s;
+    margin: clamp(0rem, 1vh, 0.3rem) 0;
   }
 
-  /* Info bar under the ring */
-  #info-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 0.6rem;
-    font-size: clamp(0.8rem, 2.8vw, 1rem);
-    opacity: 0.6;
-    min-height: 1.5rem;
+  body.state-work #timer-number       { color: var(--fg); }
+  body.state-rest #timer-number       { color: var(--rest-fg); }
+  body.state-transition #timer-number {
+    color: var(--fg-dim);
+    font-size: clamp(4rem, 16vw, 8rem);
   }
 
-  #info-bar span {
-    white-space: nowrap;
+  /* Phase label */
+  #phase-label {
+    font-size: clamp(1rem, 3.5vw, 1.4rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    transition: color 0.4s;
+    margin-bottom: clamp(0.3rem, 1vh, 0.6rem);
   }
 
-  .dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.4;
-  }
+  body.state-work #phase-label       { color: var(--hold-fg); }
+  body.state-rest #phase-label       { color: var(--rest-fg); }
+  body.state-transition #phase-label { color: var(--trans-fg); }
 
-  /* Exercise dots — shows position within cycle */
-  #exercise-dots {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0.7rem;
+  /* Rep info */
+  #rep-info {
+    font-size: clamp(0.85rem, 2.8vw, 1.05rem);
+    opacity: 0.5;
     min-height: 1.2rem;
+    margin-bottom: clamp(0.3rem, 1.5vh, 0.8rem);
   }
 
-  .ex-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.2);
-    transition: all 0.3s;
+  /* Exercise segment bar */
+  #segments {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(0.5rem, 2vh, 1rem);
   }
 
-  .ex-dot.active {
-    width: 10px;
-    height: 10px;
+  .seg {
+    width: clamp(28px, 10vw, 48px);
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.1);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .seg.done { background: rgba(255,255,255,0.35); }
+
+  .seg.active {
     background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
   }
 
-  .ex-dot.done {
-    background: rgba(255,255,255,0.5);
-  }
-
-  body.state-work .ex-dot.active       { background: var(--work-fg); }
-  body.state-rest .ex-dot.active       { background: var(--rest-fg); }
-  body.state-transition .ex-dot.active { background: var(--trans-fg); }
+  body.state-work .seg.active       { background: var(--hold-fg); box-shadow: 0 0 10px var(--hold-fg); }
+  body.state-rest .seg.active       { background: var(--rest-fg); box-shadow: 0 0 10px var(--rest-fg); }
+  body.state-transition .seg.active { background: var(--trans-fg); box-shadow: 0 0 10px var(--trans-fg); }
 
   /* Controls */
   .controls {
     display: flex;
-    gap: 1.2rem;
-    margin-top: 0.8rem;
+    gap: 1rem;
   }
 
   .ctrl-btn {
-    background: rgba(255,255,255,0.08);
-    border: none;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
     color: var(--fg);
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
+    opacity: 0.6;
   }
 
-  .ctrl-btn:active { background: rgba(255,255,255,0.2); }
+  .ctrl-btn:active {
+    background: rgba(255,255,255,0.15);
+    opacity: 1;
+  }
 
   /* Pause overlay */
   #pause-overlay {
     display: none;
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.7);
     align-items: center;
     justify-content: center;
-    font-size: clamp(1.5rem, 5vw, 2rem);
-    font-weight: 700;
-    letter-spacing: 4px;
+    flex-direction: column;
+    gap: 0.5rem;
     z-index: 10;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   #pause-overlay.visible { display: flex; }
 
-  /* Progress bar */
+  #pause-overlay .pause-text {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  #pause-overlay .pause-hint {
+    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
+    opacity: 0.3;
+  }
+
+  /* Progress bar — thick, bottom */
   #progress-wrap {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: rgba(255,255,255,0.06);
+    height: 8px;
+    background: rgba(255,255,255,0.04);
   }
 
   #progress-bar {
     height: 100%;
-    background: var(--accent);
     width: 0%;
-    transition: width 0.3s, background 0.4s;
+    transition: width 0.3s linear, background 0.4s;
   }
 
-  body.state-work #progress-bar       { background: var(--work-fg); }
+  body.state-work #progress-bar       { background: var(--hold-fg); }
   body.state-rest #progress-bar       { background: var(--rest-fg); }
   body.state-transition #progress-bar { background: var(--trans-fg); }
   body.state-done #progress-bar       { background: var(--done-fg); }
@@ -306,8 +335,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
+    gap: clamp(1.5rem, 4vh, 2.5rem);
     padding: 1.5rem;
+    animation: fade-in 0.5s ease-out;
+  }
+
+  .done-check {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid var(--done-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    color: var(--done-fg);
   }
 
   #done-msg {
@@ -317,11 +359,22 @@
     color: var(--done-fg);
   }
 
-  .total-time {
-    font-size: clamp(0.9rem, 3vw, 1.1rem);
-    opacity: 0.6;
-    margin-top: 0.5rem;
-    color: var(--fg);
+  .done-stats {
+    text-align: center;
+    opacity: 0.5;
+    font-size: clamp(0.85rem, 2.5vw, 1rem);
+    line-height: 1.8;
+  }
+
+  /* ── Landscape tweak ───────────────────────────── */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #timer-number { font-size: clamp(4rem, 18vh, 8rem); }
+    #exercise-name { font-size: clamp(1rem, 3.5vh, 1.5rem); }
+    body.state-transition #exercise-name { font-size: clamp(1.3rem, 5vh, 2rem); }
+    body.state-transition #timer-number { font-size: clamp(2.5rem, 10vh, 5rem); }
+    #round-pill { margin-bottom: 0.3rem; }
+    #segments { margin-bottom: 0.3rem; }
+    .controls { margin-top: 0; }
   }
 </style>
 </head>
@@ -333,42 +386,33 @@
     <h1>McGill Big 3</h1>
     <div class="subtitle">Pyramid Timer</div>
   </div>
-  <div class="config">
-    <div>Curl-up · Side Plank L/R · Bird Dog L/R</div>
-    <div>10s hold · 5s rest</div>
-    <div>6 reps → 4 reps → 2 reps per exercise</div>
-    <div id="est-time"></div>
+  <div class="exercise-list">
+    <div>Curl-up</div>
+    <div>Side Plank (Left / Right)</div>
+    <div>Bird Dog (Left / Right)</div>
   </div>
+  <div class="config-row">10s hold · 5s rest · 6 → 4 → 2 reps</div>
+  <div class="est-time" id="est-time"></div>
   <button class="big-btn" id="btn-start">START</button>
 </div>
 
 <!-- Timer Screen -->
 <div id="timer-screen">
-  <div id="phase-label"></div>
+  <div id="round-pill"></div>
   <div id="exercise-name"></div>
-
-  <div class="timer-ring-wrap">
-    <svg viewBox="0 0 240 240">
-      <circle class="ring-bg" cx="120" cy="120" r="104"/>
-      <circle class="ring-fg" id="ring" cx="120" cy="120" r="104"/>
-    </svg>
-    <div id="timer-number">0</div>
-  </div>
-
-  <div id="exercise-dots"></div>
-
-  <div id="info-bar">
-    <span id="set-info"></span>
-    <div class="dot"></div>
-    <span id="cycle-info"></span>
-  </div>
-
+  <div id="timer-number">10</div>
+  <div id="phase-label"></div>
+  <div id="rep-info"></div>
+  <div id="segments"></div>
   <div class="controls">
-    <button class="ctrl-btn" id="btn-pause" title="Pause / Resume">⏸</button>
+    <button class="ctrl-btn" id="btn-pause" title="Pause">⏸</button>
     <button class="ctrl-btn" id="btn-reset" title="Reset">⏹</button>
   </div>
 
-  <div id="pause-overlay">PAUSED</div>
+  <div id="pause-overlay">
+    <div class="pause-text">Paused</div>
+    <div class="pause-hint">Tap to resume</div>
+  </div>
 
   <div id="progress-wrap">
     <div id="progress-bar"></div>
@@ -377,10 +421,9 @@
 
 <!-- Done Screen -->
 <div id="done-screen">
-  <div id="done-msg">
-    Done!
-    <div class="total-time" id="total-time"></div>
-  </div>
+  <div class="done-check">&#10003;</div>
+  <div id="done-msg">Done!</div>
+  <div class="done-stats" id="done-stats"></div>
   <button class="big-btn" id="btn-again">AGAIN</button>
 </div>
 
@@ -398,33 +441,29 @@ const WORK_SEC = 10;
 const REST_SEC = 5;
 const TRANSITION_SEC = 10;
 
+const THEME_COLORS = {
+  work: '#0a2e1a',
+  rest: '#2e1f0a',
+  transition: '#0a1a2e',
+  done: '#1e0a2e',
+};
+
 // ── Build step list ─────────────────────────────────
-// For each round (6, 4, 2): do each exercise N times before moving
-// to the next exercise. Transition between exercises, rest between reps.
 function buildSteps() {
   const steps = [];
-  const lastRound = SETS.length - 1;
-
   for (let si = 0; si < SETS.length; si++) {
     const repCount = SETS[si];
-
     for (let ei = 0; ei < EXERCISES.length; ei++) {
       const ex = EXERCISES[ei];
-
-      // Transition before each exercise
       steps.push({
         type: 'transition', duration: TRANSITION_SEC,
         exercise: ex, round: repCount, rep: 1, repTotal: repCount, exIndex: ei,
       });
-
       for (let r = 1; r <= repCount; r++) {
-        // Work
         steps.push({
           type: 'work', duration: WORK_SEC,
           exercise: ex, round: repCount, rep: r, repTotal: repCount, exIndex: ei,
         });
-
-        // Rest after every rep except the last rep of this exercise
         if (r < repCount) {
           steps.push({
             type: 'rest', duration: REST_SEC,
@@ -445,13 +484,19 @@ function buildCumulativeMs(steps) {
   return cum;
 }
 
-function estimateTotalTime() {
-  const s = buildSteps();
-  const ms = s.reduce((sum, step) => sum + step.duration * 1000, 0);
-  const sec = Math.round(ms / 1000);
+function formatTime(sec) {
   const m = Math.floor(sec / 60);
-  const r = sec % 60;
-  return `~${m}:${String(r).padStart(2, '0')} total`;
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function estimateTotal() {
+  const s = buildSteps();
+  return Math.round(s.reduce((sum, step) => sum + step.duration, 0));
+}
+
+function totalHolds() {
+  return SETS.reduce((sum, n) => sum + n, 0) * EXERCISES.length;
 }
 
 // ── Audio ───────────────────────────────────────────
@@ -504,7 +549,6 @@ function speak(text) {
     speechSynthesis.speak(u);
   }
 }
-
 function stopSpeech() {
   if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
@@ -516,35 +560,30 @@ const $doneScreen    = document.getElementById('done-screen');
 const $exerciseName  = document.getElementById('exercise-name');
 const $phaseLabel    = document.getElementById('phase-label');
 const $timerNumber   = document.getElementById('timer-number');
-const $setInfo       = document.getElementById('set-info');
-const $cycleInfo     = document.getElementById('cycle-info');
-const $exerciseDots  = document.getElementById('exercise-dots');
-const $ring          = document.getElementById('ring');
+const $roundPill     = document.getElementById('round-pill');
+const $repInfo       = document.getElementById('rep-info');
+const $segments      = document.getElementById('segments');
 const $progressBar   = document.getElementById('progress-bar');
 const $btnStart      = document.getElementById('btn-start');
 const $btnAgain      = document.getElementById('btn-again');
 const $btnPause      = document.getElementById('btn-pause');
 const $btnReset      = document.getElementById('btn-reset');
-const $totalTime     = document.getElementById('total-time');
+const $doneStats     = document.getElementById('done-stats');
 const $pauseOverlay  = document.getElementById('pause-overlay');
 const $estTime       = document.getElementById('est-time');
+const $metaTheme     = document.getElementById('meta-theme');
 
-const RING_R = 104;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
-$ring.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
-$ring.setAttribute('stroke-dashoffset', '0');
-
-// Show estimated time on start screen
-$estTime.textContent = estimateTotalTime();
-
-// Build exercise dots
+// Build exercise segments
 for (let i = 0; i < EXERCISES.length; i++) {
-  const dot = document.createElement('div');
-  dot.className = 'ex-dot';
-  dot.title = EXERCISES[i];
-  $exerciseDots.appendChild(dot);
+  const seg = document.createElement('div');
+  seg.className = 'seg';
+  seg.title = EXERCISES[i];
+  $segments.appendChild(seg);
 }
-const exDotEls = $exerciseDots.querySelectorAll('.ex-dot');
+const segEls = $segments.querySelectorAll('.seg');
+
+// Show estimated time
+$estTime.textContent = '~' + formatTime(estimateTotal());
 
 // ── State ───────────────────────────────────────────
 let steps = [];
@@ -559,13 +598,18 @@ let rafId = null;
 let startedAt = 0;
 let lastTickSecond = -1;
 let prevStepIndex = -1;
+let isUrgent = false;
 
-// ── Screen management ───────────────────────────────
+// ── Screens ─────────────────────────────────────────
 function showScreen(screen) {
   $startScreen.style.display = 'none';
   $timerScreen.style.display = 'none';
   $doneScreen.style.display  = 'none';
   screen.style.display = 'flex';
+}
+
+function setThemeColor(state) {
+  $metaTheme.setAttribute('content', THEME_COLORS[state] || '#111318');
 }
 
 // ── Render ──────────────────────────────────────────
@@ -576,37 +620,63 @@ function render() {
   if (stepIndex !== prevStepIndex) {
     prevStepIndex = stepIndex;
     document.body.className = 'state-' + step.type;
+    setThemeColor(step.type);
+    isUrgent = false;
+    $timerNumber.classList.remove('urgent');
 
-    // Phase label + exercise name
-    if (step.type === 'transition') {
-      $phaseLabel.textContent = 'GET READY';
-      $exerciseName.textContent = step.exercise;
-    } else if (step.type === 'work') {
-      $phaseLabel.textContent = 'HOLD';
+    // Pop animation on number
+    $timerNumber.classList.remove('pop');
+    void $timerNumber.offsetWidth; // reflow to retrigger
+    $timerNumber.classList.add('pop');
+
+    // Exercise name
+    if (step.type === 'rest') {
       $exerciseName.textContent = step.exercise;
     } else {
-      $phaseLabel.textContent = 'REST';
       $exerciseName.textContent = step.exercise;
     }
 
-    // Info bar
-    $setInfo.textContent = `Round of ${step.round}`;
-    $cycleInfo.textContent = `Rep ${step.rep} / ${step.repTotal}`;
+    // Phase label
+    if (step.type === 'transition') {
+      $phaseLabel.textContent = 'GET READY';
+    } else if (step.type === 'work') {
+      $phaseLabel.textContent = 'HOLD';
+    } else {
+      $phaseLabel.textContent = 'REST';
+    }
 
-    // Exercise dots
-    for (let i = 0; i < exDotEls.length; i++) {
-      exDotEls[i].className = 'ex-dot';
-      if (i < step.exIndex) exDotEls[i].classList.add('done');
-      else if (i === step.exIndex) exDotEls[i].classList.add('active');
+    // Round pill
+    $roundPill.textContent = `Round of ${step.round}`;
+
+    // Rep info
+    if (step.type === 'transition') {
+      $repInfo.textContent = `${step.repTotal} reps coming up`;
+    } else {
+      $repInfo.textContent = `Rep ${step.rep} / ${step.repTotal}`;
+    }
+
+    // Segments
+    for (let i = 0; i < segEls.length; i++) {
+      segEls[i].className = 'seg';
+      if (i < step.exIndex) segEls[i].classList.add('done');
+      else if (i === step.exIndex) segEls[i].classList.add('active');
     }
   }
 
+  // Timer number
   const secLeft = Math.ceil(timeLeft / 1000);
   $timerNumber.textContent = secLeft;
 
-  const frac = 1 - (timeLeft / (step.duration * 1000));
-  $ring.style.strokeDashoffset = RING_CIRCUMFERENCE * frac;
+  // Urgency on last 3 seconds
+  if (secLeft <= 3 && timeLeft > 0 && !isUrgent) {
+    isUrgent = true;
+    $timerNumber.classList.add('urgent');
+  } else if (secLeft > 3 && isUrgent) {
+    isUrgent = false;
+    $timerNumber.classList.remove('urgent');
+  }
 
+  // Overall progress
   const overallElapsed = cumulativeMs[stepIndex] + (step.duration * 1000 - timeLeft);
   const pct = Math.min(100, (overallElapsed / totalDuration) * 100);
   $progressBar.style.width = pct + '%';
@@ -648,7 +718,6 @@ function tick(now) {
 
 function onStepStart() {
   const step = steps[stepIndex];
-
   if (step.type === 'work') {
     beepWork();
     vibrate(200);
@@ -668,12 +737,12 @@ function finish() {
   running = false;
   if (rafId) cancelAnimationFrame(rafId);
   document.body.className = 'state-done';
+  setThemeColor('done');
   showScreen($doneScreen);
 
   const elapsed = Math.round((Date.now() - startedAt) / 1000);
-  const m = Math.floor(elapsed / 60);
-  const s = elapsed % 60;
-  $totalTime.textContent = `${m}:${String(s).padStart(2, '0')} total`;
+  const holds = totalHolds();
+  $doneStats.innerHTML = `${formatTime(elapsed)} total<br>${holds} holds completed`;
 
   beepDone();
   vibrate([200, 100, 200, 100, 400]);
@@ -717,6 +786,7 @@ function resetToStart() {
   if (rafId) cancelAnimationFrame(rafId);
   stopSpeech();
   document.body.className = '';
+  setThemeColor('');
   showScreen($startScreen);
   releaseWakeLock();
 }
@@ -725,8 +795,6 @@ $btnStart.addEventListener('click', startWorkout);
 $btnAgain.addEventListener('click', startWorkout);
 $btnPause.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
 $btnReset.addEventListener('click', (e) => { e.stopPropagation(); resetToStart(); });
-
-// Tap anywhere on timer screen to pause/resume
 $timerScreen.addEventListener('click', togglePause);
 
 // ── Wake Lock ───────────────────────────────────────
