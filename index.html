@@ -554,8 +554,7 @@ let timeLeft = 0;
 let running = false;
 let lastTick = 0;
 let rafId = null;
-let startedAt = 0;        // wall clock (Date.now) when workout began
-let stepWallStart = 0;     // wall clock when current step began
+let startedAt = 0;
 let lastTickSecond = -1;
 let prevStepIndex = -1;
 let isUrgent = false;
@@ -638,45 +637,14 @@ function render() {
 }
 
 // ── Timer loop ──────────────────────────────────────
-
-// Sync state from wall clock — used after backgrounding
-function syncToWallClock() {
-  const wallElapsed = Date.now() - startedAt;
-  // Find which step we should be in based on total wall time elapsed
-  let accumulated = 0;
-  for (let i = 0; i < steps.length; i++) {
-    const stepMs = steps[i].duration * 1000;
-    if (accumulated + stepMs > wallElapsed) {
-      // We're in this step
-      const changed = (i !== stepIndex);
-      stepIndex = i;
-      timeLeft = stepMs - (wallElapsed - accumulated);
-      stepWallStart = startedAt + accumulated;
-      lastTickSecond = -1;
-      if (changed) {
-        prevStepIndex = -1; // force render refresh
-        onStepStart();
-      }
-      return;
-    }
-    accumulated += stepMs;
-  }
-  // Past all steps — workout is done
-  finish();
-}
-
 function tick(now) {
   if (!running) return;
 
   const dt = now - lastTick;
   lastTick = now;
 
-  // Guard: if dt is huge (>2s), we were backgrounded.
-  // Use wall clock to catch up silently instead of burst-firing steps.
-  if (dt > 2000) {
-    syncToWallClock();
-    if (!running) return; // finished while backgrounded
-    render();
+  // Cap dt — if we were backgrounded, just resume where we left off
+  if (dt > 500) {
     rafId = requestAnimationFrame(tick);
     return;
   }
@@ -696,7 +664,6 @@ function tick(now) {
       return;
     }
     timeLeft += steps[stepIndex].duration * 1000;
-    stepWallStart = Date.now();
     lastTickSecond = -1;
     onStepStart();
   }
@@ -750,7 +717,6 @@ function startWorkout() {
   prevStepIndex = -1;
   running = true;
   startedAt = Date.now();
-  stepWallStart = startedAt;
 
   showScreen($timerScreen);
 
@@ -800,13 +766,9 @@ function releaseWakeLock() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && running) {
-    // Recover timer position from wall clock after backgrounding
-    syncToWallClock();
-    if (running) {
-      render();
-      lastTick = performance.now();
-      rafId = requestAnimationFrame(tick);
-    }
+    lastTick = performance.now();
+    render();
+    rafId = requestAnimationFrame(tick);
     requestWakeLock();
   }
 });
