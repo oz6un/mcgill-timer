@@ -172,12 +172,13 @@
     text-align: center;
     min-height: 1.8rem;
     margin-bottom: clamp(0.2rem, 1vh, 0.5rem);
-    transition: font-size 0.3s;
+    transition: transform 0.3s, color 0.3s;
+    transform-origin: center center;
   }
 
   /* During transition, exercise name is the hero */
   body.state-transition #exercise-name {
-    font-size: clamp(1.8rem, 7vw, 3rem);
+    transform: scale(1.45);
     color: var(--trans-fg);
   }
 
@@ -189,7 +190,9 @@
     line-height: 1;
     letter-spacing: -2px;
     text-shadow: 0 2px 30px rgba(0,0,0,0.3);
-    transition: color 0.4s;
+    transition: color 0.4s, transform 0.3s;
+    transform-origin: center center;
+    will-change: transform, opacity;
     margin: clamp(0rem, 1vh, 0.3rem) 0;
   }
 
@@ -197,7 +200,7 @@
   body.state-rest #timer-number       { color: var(--rest-fg); }
   body.state-transition #timer-number {
     color: var(--fg-dim);
-    font-size: clamp(4rem, 16vw, 8rem);
+    transform: scale(0.55);
   }
 
   /* Phase label */
@@ -255,8 +258,8 @@
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.08);
     color: var(--fg);
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     font-size: 1rem;
     cursor: pointer;
@@ -330,8 +333,8 @@
   @media (orientation: landscape) and (max-height: 500px) {
     #timer-number { font-size: clamp(4rem, 18vh, 8rem); }
     #exercise-name { font-size: clamp(1rem, 3.5vh, 1.5rem); }
-    body.state-transition #exercise-name { font-size: clamp(1.3rem, 5vh, 2rem); }
-    body.state-transition #timer-number { font-size: clamp(2.5rem, 10vh, 5rem); }
+    body.state-transition #exercise-name { transform: scale(1.3); }
+    body.state-transition #timer-number { transform: scale(0.5); }
     #round-pill { margin-bottom: 0.3rem; }
     #segments { margin-bottom: 0.3rem; }
   }
@@ -352,6 +355,7 @@
   </div>
   <div class="config-row">10s hold · 5s rest · 6 → 4 → 2 reps</div>
   <div class="est-time" id="est-time"></div>
+  <div class="config-row">Unmute your phone for audio cues</div>
   <button class="big-btn" id="btn-start">START</button>
 </div>
 
@@ -539,7 +543,8 @@ let timeLeft = 0;
 let running = false;
 let lastTick = 0;
 let rafId = null;
-let startedAt = 0;
+let startedAt = 0;        // wall clock (Date.now) when workout began
+let stepWallStart = 0;     // wall clock when current step began
 let lastTickSecond = -1;
 let prevStepIndex = -1;
 let isUrgent = false;
@@ -573,12 +578,7 @@ function render() {
     void $timerNumber.offsetWidth; // reflow to retrigger
     $timerNumber.classList.add('pop');
 
-    // Exercise name
-    if (step.type === 'rest') {
-      $exerciseName.textContent = step.exercise;
-    } else {
-      $exerciseName.textContent = step.exercise;
-    }
+    $exerciseName.textContent = step.exercise;
 
     // Phase label
     if (step.type === 'transition') {
@@ -627,11 +627,49 @@ function render() {
 }
 
 // ── Timer loop ──────────────────────────────────────
+
+// Sync state from wall clock — used after backgrounding
+function syncToWallClock() {
+  const wallElapsed = Date.now() - startedAt;
+  // Find which step we should be in based on total wall time elapsed
+  let accumulated = 0;
+  for (let i = 0; i < steps.length; i++) {
+    const stepMs = steps[i].duration * 1000;
+    if (accumulated + stepMs > wallElapsed) {
+      // We're in this step
+      const changed = (i !== stepIndex);
+      stepIndex = i;
+      timeLeft = stepMs - (wallElapsed - accumulated);
+      stepWallStart = startedAt + accumulated;
+      lastTickSecond = -1;
+      if (changed) {
+        prevStepIndex = -1; // force render refresh
+        onStepStart();
+      }
+      return;
+    }
+    accumulated += stepMs;
+  }
+  // Past all steps — workout is done
+  finish();
+}
+
 function tick(now) {
   if (!running) return;
 
   const dt = now - lastTick;
   lastTick = now;
+
+  // Guard: if dt is huge (>2s), we were backgrounded.
+  // Use wall clock to catch up silently instead of burst-firing steps.
+  if (dt > 2000) {
+    syncToWallClock();
+    if (!running) return; // finished while backgrounded
+    render();
+    rafId = requestAnimationFrame(tick);
+    return;
+  }
+
   timeLeft -= dt;
 
   const secLeft = Math.ceil(timeLeft / 1000);
@@ -647,6 +685,7 @@ function tick(now) {
       return;
     }
     timeLeft += steps[stepIndex].duration * 1000;
+    stepWallStart = Date.now();
     lastTickSecond = -1;
     onStepStart();
   }
@@ -699,6 +738,7 @@ function startWorkout() {
   prevStepIndex = -1;
   running = true;
   startedAt = Date.now();
+  stepWallStart = startedAt;
 
   showScreen($timerScreen);
 
@@ -747,7 +787,16 @@ function releaseWakeLock() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && running) requestWakeLock();
+  if (document.visibilityState === 'visible' && running) {
+    // Recover timer position from wall clock after backgrounding
+    syncToWallClock();
+    if (running) {
+      render();
+      lastTick = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+    requestWakeLock();
+  }
 });
 </script>
 </body>
