@@ -355,7 +355,6 @@
   </div>
   <div class="config-row">10s hold · 5s rest · 6 → 4 → 2 reps</div>
   <div class="est-time" id="est-time"></div>
-  <div class="config-row">Unmute your phone for audio cues</div>
   <button class="big-btn" id="btn-start">START</button>
 </div>
 
@@ -454,6 +453,18 @@ function totalHolds() {
 }
 
 // ── Audio ───────────────────────────────────────────
+// Play a silent WAV via <audio> on first user gesture to switch iOS
+// from "ringer" to "media playback" audio session. This bypasses the
+// silent mode switch — all subsequent Web Audio output uses the media
+// channel (controlled by volume buttons, not the mute toggle).
+let audioUnlocked = false;
+function unlockAudioSession() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+  silent.play().catch(() => {});
+}
+
 let audioCtx = null;
 function ensureAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -730,6 +741,7 @@ function finish() {
 
 // ── Controls ────────────────────────────────────────
 function startWorkout() {
+  unlockAudioSession();
   ensureAudio();
   steps = buildSteps();
   cumulativeMs = buildCumulativeMs(steps);
