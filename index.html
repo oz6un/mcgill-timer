@@ -336,7 +336,7 @@
   <div class="config">
     <div>Curl-up · Side Plank L/R · Bird Dog L/R</div>
     <div>10s hold · 5s rest</div>
-    <div>6 cycles → 4 cycles → 2 cycles</div>
+    <div>6 reps → 4 reps → 2 reps per exercise</div>
     <div id="est-time"></div>
   </div>
   <button class="big-btn" id="btn-start">START</button>
@@ -399,46 +399,37 @@ const REST_SEC = 5;
 const TRANSITION_SEC = 10;
 
 // ── Build step list ─────────────────────────────────
+// For each round (6, 4, 2): do each exercise N times before moving
+// to the next exercise. Transition between exercises, rest between reps.
 function buildSteps() {
   const steps = [];
-  const lastSetIdx = SETS.length - 1;
+  const lastRound = SETS.length - 1;
 
   for (let si = 0; si < SETS.length; si++) {
-    const setCount = SETS[si];
+    const repCount = SETS[si];
 
-    steps.push({
-      type: 'transition', duration: TRANSITION_SEC,
-      exercise: EXERCISES[0], set: setCount, cycle: 1, cycleTotal: setCount, exIndex: 0,
-    });
+    for (let ei = 0; ei < EXERCISES.length; ei++) {
+      const ex = EXERCISES[ei];
 
-    for (let c = 1; c <= setCount; c++) {
-      for (let ei = 0; ei < EXERCISES.length; ei++) {
-        const ex = EXERCISES[ei];
+      // Transition before each exercise
+      steps.push({
+        type: 'transition', duration: TRANSITION_SEC,
+        exercise: ex, round: repCount, rep: 1, repTotal: repCount, exIndex: ei,
+      });
 
+      for (let r = 1; r <= repCount; r++) {
+        // Work
         steps.push({
           type: 'work', duration: WORK_SEC,
-          exercise: ex, set: setCount, cycle: c, cycleTotal: setCount, exIndex: ei,
+          exercise: ex, round: repCount, rep: r, repTotal: repCount, exIndex: ei,
         });
 
-        const isVeryEnd = (si === lastSetIdx) && (c === setCount) && (ei === EXERCISES.length - 1);
-        if (!isVeryEnd) {
-          const isEndOfCycle = (ei === EXERCISES.length - 1);
-          if (isEndOfCycle && c < setCount) {
-            steps.push({
-              type: 'rest', duration: REST_SEC,
-              exercise: EXERCISES[0], set: setCount, cycle: c + 1, cycleTotal: setCount, exIndex: 0,
-            });
-          } else if (isEndOfCycle && c === setCount && si < lastSetIdx) {
-            steps.push({
-              type: 'transition', duration: TRANSITION_SEC,
-              exercise: EXERCISES[0], set: SETS[si + 1], cycle: 1, cycleTotal: SETS[si + 1], exIndex: 0,
-            });
-          } else {
-            steps.push({
-              type: 'rest', duration: REST_SEC,
-              exercise: EXERCISES[ei + 1], set: setCount, cycle: c, cycleTotal: setCount, exIndex: ei + 1,
-            });
-          }
+        // Rest after every rep except the last rep of this exercise
+        if (r < repCount) {
+          steps.push({
+            type: 'rest', duration: REST_SEC,
+            exercise: ex, round: repCount, rep: r, repTotal: repCount, exIndex: ei,
+          });
         }
       }
     }
@@ -586,7 +577,7 @@ function render() {
     prevStepIndex = stepIndex;
     document.body.className = 'state-' + step.type;
 
-    // Phase label
+    // Phase label + exercise name
     if (step.type === 'transition') {
       $phaseLabel.textContent = 'GET READY';
       $exerciseName.textContent = step.exercise;
@@ -595,22 +586,18 @@ function render() {
       $exerciseName.textContent = step.exercise;
     } else {
       $phaseLabel.textContent = 'REST';
-      $exerciseName.textContent = 'Next: ' + step.exercise;
+      $exerciseName.textContent = step.exercise;
     }
 
     // Info bar
-    $setInfo.textContent = `Set of ${step.set}`;
-    $cycleInfo.textContent = `Cycle ${step.cycle} / ${step.cycleTotal}`;
+    $setInfo.textContent = `Round of ${step.round}`;
+    $cycleInfo.textContent = `Rep ${step.rep} / ${step.repTotal}`;
 
     // Exercise dots
     for (let i = 0; i < exDotEls.length; i++) {
       exDotEls[i].className = 'ex-dot';
-      if (step.type === 'work' || step.type === 'rest') {
-        if (i < step.exIndex) exDotEls[i].classList.add('done');
-        else if (i === step.exIndex) exDotEls[i].classList.add('active');
-      } else {
-        // transition — all reset
-      }
+      if (i < step.exIndex) exDotEls[i].classList.add('done');
+      else if (i === step.exIndex) exDotEls[i].classList.add('active');
     }
   }
 
@@ -665,7 +652,7 @@ function onStepStart() {
   if (step.type === 'work') {
     beepWork();
     vibrate(200);
-    speak(step.exercise);
+    speak(step.rep === 1 ? step.exercise : `${step.rep}`);
   } else if (step.type === 'rest') {
     beepRest();
     vibrate([100, 50, 100]);
@@ -673,7 +660,7 @@ function onStepStart() {
   } else if (step.type === 'transition') {
     beepTransition();
     vibrate([100, 80, 100, 80, 100]);
-    speak(`Get ready. Set of ${step.set}. Cycle ${step.cycle}.`);
+    speak(`${step.exercise}. Round of ${step.round}.`);
   }
 }
 
