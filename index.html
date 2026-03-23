@@ -149,7 +149,6 @@
     width: 100%;
     height: 100%;
     position: relative;
-    cursor: pointer;
     padding: 0.5rem 1rem;
   }
 
@@ -251,64 +250,7 @@
   body.state-rest .seg.active       { background: var(--rest-fg); box-shadow: 0 0 10px var(--rest-fg); }
   body.state-transition .seg.active { background: var(--trans-fg); box-shadow: 0 0 10px var(--trans-fg); }
 
-  /* Controls */
-  .controls {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .ctrl-btn {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: var(--fg);
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-    opacity: 0.6;
-  }
-
-  .ctrl-btn:active {
-    background: rgba(255,255,255,0.15);
-    opacity: 1;
-  }
-
-  /* Pause overlay */
-  #pause-overlay {
-    display: none;
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 0.5rem;
-    z-index: 10;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  #pause-overlay.visible { display: flex; }
-
-  #pause-overlay .pause-text {
-    font-size: clamp(1.5rem, 5vw, 2rem);
-    font-weight: 700;
-    letter-spacing: 6px;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-
-  #pause-overlay .pause-hint {
-    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
-    opacity: 0.3;
-  }
-
-  /* Progress bar — thick, bottom */
+/* Progress bar — thick, bottom */
   #progress-wrap {
     position: absolute;
     bottom: 0;
@@ -374,7 +316,6 @@
     body.state-transition #timer-number { font-size: clamp(2.5rem, 10vh, 5rem); }
     #round-pill { margin-bottom: 0.3rem; }
     #segments { margin-bottom: 0.3rem; }
-    .controls { margin-top: 0; }
   }
 </style>
 </head>
@@ -404,16 +345,6 @@
   <div id="phase-label"></div>
   <div id="rep-info"></div>
   <div id="segments"></div>
-  <div class="controls">
-    <button class="ctrl-btn" id="btn-pause" title="Pause">⏸</button>
-    <button class="ctrl-btn" id="btn-reset" title="Reset">⏹</button>
-  </div>
-
-  <div id="pause-overlay">
-    <div class="pause-text">Paused</div>
-    <div class="pause-hint">Tap to resume</div>
-  </div>
-
   <div id="progress-wrap">
     <div id="progress-bar"></div>
   </div>
@@ -549,9 +480,6 @@ function speak(text) {
     speechSynthesis.speak(u);
   }
 }
-function stopSpeech() {
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
-}
 
 // ── DOM refs ────────────────────────────────────────
 const $startScreen   = document.getElementById('start-screen');
@@ -566,10 +494,7 @@ const $segments      = document.getElementById('segments');
 const $progressBar   = document.getElementById('progress-bar');
 const $btnStart      = document.getElementById('btn-start');
 const $btnAgain      = document.getElementById('btn-again');
-const $btnPause      = document.getElementById('btn-pause');
-const $btnReset      = document.getElementById('btn-reset');
 const $doneStats     = document.getElementById('done-stats');
-const $pauseOverlay  = document.getElementById('pause-overlay');
 const $estTime       = document.getElementById('est-time');
 const $metaTheme     = document.getElementById('meta-theme');
 
@@ -591,7 +516,6 @@ let cumulativeMs = null;
 let totalDuration = 0;
 let stepIndex = 0;
 let timeLeft = 0;
-let paused = false;
 let running = false;
 let lastTick = 0;
 let rafId = null;
@@ -685,11 +609,6 @@ function render() {
 // ── Timer loop ──────────────────────────────────────
 function tick(now) {
   if (!running) return;
-  if (paused) {
-    lastTick = now;
-    rafId = requestAnimationFrame(tick);
-    return;
-  }
 
   const dt = now - lastTick;
   lastTick = now;
@@ -751,13 +670,6 @@ function finish() {
 }
 
 // ── Controls ────────────────────────────────────────
-function togglePause() {
-  paused = !paused;
-  $btnPause.textContent = paused ? '▶' : '⏸';
-  $pauseOverlay.className = paused ? 'visible' : '';
-  if (paused) stopSpeech();
-}
-
 function startWorkout() {
   ensureAudio();
   steps = buildSteps();
@@ -765,13 +677,10 @@ function startWorkout() {
   totalDuration = cumulativeMs[steps.length];
   stepIndex = 0;
   prevStepIndex = -1;
-  paused = false;
   running = true;
   startedAt = Date.now();
 
   showScreen($timerScreen);
-  $btnPause.textContent = '⏸';
-  $pauseOverlay.className = '';
 
   onStepStart();
   timeLeft = steps[0].duration * 1000;
@@ -781,21 +690,8 @@ function startWorkout() {
   requestWakeLock();
 }
 
-function resetToStart() {
-  running = false;
-  if (rafId) cancelAnimationFrame(rafId);
-  stopSpeech();
-  document.body.className = '';
-  setThemeColor('');
-  showScreen($startScreen);
-  releaseWakeLock();
-}
-
 $btnStart.addEventListener('click', startWorkout);
 $btnAgain.addEventListener('click', startWorkout);
-$btnPause.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
-$btnReset.addEventListener('click', (e) => { e.stopPropagation(); resetToStart(); });
-$timerScreen.addEventListener('click', togglePause);
 
 // ── Wake Lock ───────────────────────────────────────
 let wakeLock = null;
@@ -820,7 +716,7 @@ function releaseWakeLock() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && running && !paused) requestWakeLock();
+  if (document.visibilityState === 'visible' && running) requestWakeLock();
 });
 </script>
 </body>
