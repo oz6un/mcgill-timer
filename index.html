@@ -250,7 +250,25 @@
   body.state-rest .seg.active       { background: var(--rest-fg); box-shadow: 0 0 10px var(--rest-fg); }
   body.state-transition .seg.active { background: var(--trans-fg); box-shadow: 0 0 10px var(--trans-fg); }
 
-/* Progress bar — thick, bottom */
+/* Reset button — small, subtle, out of the way */
+  .reset-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--fg);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0.25;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .reset-btn:active { opacity: 0.6; }
+
+  /* Progress bar — thick, bottom */
   #progress-wrap {
     position: absolute;
     bottom: 0;
@@ -345,6 +363,7 @@
   <div id="phase-label"></div>
   <div id="rep-info"></div>
   <div id="segments"></div>
+  <button class="reset-btn" id="btn-reset" title="Stop &amp; Reset">&#9632;</button>
   <div id="progress-wrap">
     <div id="progress-bar"></div>
   </div>
@@ -494,6 +513,7 @@ const $segments      = document.getElementById('segments');
 const $progressBar   = document.getElementById('progress-bar');
 const $btnStart      = document.getElementById('btn-start');
 const $btnAgain      = document.getElementById('btn-again');
+const $btnReset      = document.getElementById('btn-reset');
 const $doneStats     = document.getElementById('done-stats');
 const $estTime       = document.getElementById('est-time');
 const $metaTheme     = document.getElementById('meta-theme');
@@ -690,8 +710,19 @@ function startWorkout() {
   requestWakeLock();
 }
 
+function resetToStart() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  document.body.className = '';
+  setThemeColor('');
+  showScreen($startScreen);
+  releaseWakeLock();
+}
+
 $btnStart.addEventListener('click', startWorkout);
 $btnAgain.addEventListener('click', startWorkout);
+$btnReset.addEventListener('click', resetToStart);
 
 // ── Wake Lock ───────────────────────────────────────
 let wakeLock = null;
