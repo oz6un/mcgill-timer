@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>McGill Big 3 Timer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #1a1a2e;
+    --fg: #eee;
+    --accent: #4ecca3;
+    --work: #4ecca3;
+    --rest: #f0a500;
+    --transition: #3a86ff;
+    --done: #e040fb;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: background 0.4s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body.state-work      { background: #0b3d2e; }
+  body.state-rest      { background: #3d2e0b; }
+  body.state-transition { background: #0b2e3d; }
+  body.state-done      { background: #2e0b3d; }
+
+  #start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    opacity: 0.6;
+    margin-top: 0.3rem;
+  }
+
+  .config {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    opacity: 0.7;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .big-btn {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 4px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 1.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 2px;
+  }
+
+  .big-btn:active {
+    transform: scale(0.95);
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* Timer screen */
+  #timer-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    height: 100%;
+    padding: 1.5rem;
+    position: relative;
+  }
+
+  #exercise-name {
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-align: center;
+    min-height: 2.2rem;
+  }
+
+  #phase-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    min-height: 1.4rem;
+  }
+
+  .timer-ring-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    flex-shrink: 0;
+  }
+
+  .timer-ring-wrap svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.1);
+    stroke-width: 8;
+  }
+
+  .ring-fg {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke 0.4s;
+  }
+
+  body.state-work .ring-fg      { stroke: var(--work); }
+  body.state-rest .ring-fg      { stroke: var(--rest); }
+  body.state-transition .ring-fg { stroke: var(--transition); }
+  body.state-done .ring-fg      { stroke: var(--done); }
+
+  #timer-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #set-rep-info {
+    font-size: 1rem;
+    opacity: 0.7;
+    text-align: center;
+    min-height: 1.3rem;
+  }
+
+  /* Progress bar */
+  #progress-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s, background 0.4s;
+  }
+
+  body.state-work #progress-bar      { background: var(--work); }
+  body.state-rest #progress-bar      { background: var(--rest); }
+  body.state-transition #progress-bar { background: var(--transition); }
+  body.state-done #progress-bar      { background: var(--done); }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .ctrl-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: var(--fg);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .ctrl-btn:active { background: rgba(255,255,255,0.25); }
+
+  /* Done screen */
+  #done-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  #done-msg {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .total-time {
+    font-size: 1rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- Start Screen -->
+<div id="start-screen">
+  <div>
+    <h1>McGill Big 3</h1>
+    <div class="subtitle">Pyramid Timer</div>
+  </div>
+  <div class="config">
+    <div>Curl-up · Side Plank L/R · Bird Dog L/R</div>
+    <div>10s hold · 5s rest</div>
+    <div>6 cycles → 4 cycles → 2 cycles</div>
+  </div>
+  <button class="big-btn" id="btn-start">START</button>
+</div>
+
+<!-- Timer Screen -->
+<div id="timer-screen">
+  <div id="exercise-name"></div>
+  <div id="phase-label"></div>
+
+  <div class="timer-ring-wrap">
+    <svg viewBox="0 0 240 240">
+      <circle class="ring-bg" cx="120" cy="120" r="104"/>
+      <circle class="ring-fg" id="ring" cx="120" cy="120" r="104"/>
+    </svg>
+    <div id="timer-number">0</div>
+  </div>
+
+  <div id="set-rep-info"></div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="btn-pause" title="Pause / Resume">⏸</button>
+    <button class="ctrl-btn" id="btn-reset" title="Reset">⏹</button>
+  </div>
+
+  <div id="progress-wrap">
+    <div id="progress-bar"></div>
+  </div>
+</div>
+
+<!-- Done Screen -->
+<div id="done-screen">
+  <div id="done-msg">
+    Done!
+    <div class="total-time" id="total-time"></div>
+  </div>
+  <button class="big-btn" id="btn-again">AGAIN</button>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────
+const EXERCISES = [
+  'Curl-up',
+  'Side Plank (Left)',
+  'Side Plank (Right)',
+  'Bird Dog (Left)',
+  'Bird Dog (Right)',
+];
+const SETS = [6, 4, 2];
+const WORK_SEC = 10;
+const REST_SEC = 5;
+const TRANSITION_SEC = 10;
+
+// ── Build step list ─────────────────────────────────
+// Pyramid: for each set count (6, 4, 2), do that many full cycles
+// of all exercises. Each exercise is 10s hold with 5s rest after.
+function buildSteps() {
+  const steps = [];
+  const lastSetIdx = SETS.length - 1;
+
+  for (let si = 0; si < SETS.length; si++) {
+    const setCount = SETS[si];
+
+    // Transition announcing the new set
+    steps.push({
+      type: 'transition', duration: TRANSITION_SEC,
+      exercise: EXERCISES[0], set: setCount, cycle: 1, cycleTotal: setCount,
+    });
+
+    for (let c = 1; c <= setCount; c++) {
+      for (let ei = 0; ei < EXERCISES.length; ei++) {
+        const ex = EXERCISES[ei];
+
+        // Work
+        steps.push({
+          type: 'work', duration: WORK_SEC,
+          exercise: ex, set: setCount, cycle: c, cycleTotal: setCount,
+        });
+
+        // Rest after every work EXCEPT the very last exercise of the very last cycle of the very last set
+        const isVeryEnd = (si === lastSetIdx) && (c === setCount) && (ei === EXERCISES.length - 1);
+        if (!isVeryEnd) {
+          // Use transition between cycles (longer break), rest within a cycle
+          const isEndOfCycle = (ei === EXERCISES.length - 1);
+          if (isEndOfCycle && c < setCount) {
+            // Short rest between cycles within the same set
+            steps.push({
+              type: 'rest', duration: REST_SEC,
+              exercise: EXERCISES[0], set: setCount, cycle: c + 1, cycleTotal: setCount,
+            });
+          } else if (isEndOfCycle && c === setCount && si < lastSetIdx) {
+            // Transition to next set
+            steps.push({
+              type: 'transition', duration: TRANSITION_SEC,
+              exercise: EXERCISES[0], set: SETS[si + 1], cycle: 1, cycleTotal: SETS[si + 1],
+            });
+          } else {
+            // Normal rest between exercises within a cycle
+            steps.push({
+              type: 'rest', duration: REST_SEC,
+              exercise: EXERCISES[ei + 1], set: setCount, cycle: c, cycleTotal: setCount,
+            });
+          }
+        }
+      }
+    }
+  }
+  return steps;
+}
+
+// Precompute cumulative durations for O(1) progress lookup
+function buildCumulativeMs(steps) {
+  const cum = new Float64Array(steps.length + 1);
+  for (let i = 0; i < steps.length; i++) {
+    cum[i + 1] = cum[i] + steps[i].duration * 1000;
+  }
+  return cum;
+}
+
+// ── Audio (Web Audio API) ───────────────────────────
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function beep(freq, duration, vol = 0.3) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = freq;
+  osc.type = 'sine';
+  gain.gain.value = vol;
+  gain.gain.setTargetAtTime(0, audioCtx.currentTime + duration / 1000 * 0.8, 0.015);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration / 1000);
+}
+
+function beepWork()       { beep(880, 200, 0.35); }
+function beepRest()       { beep(440, 200, 0.25); }
+function beepTick()       { beep(1000, 60, 0.15); }
+function beepTransition() {
+  beep(523, 150, 0.3);
+  setTimeout(() => beep(659, 150, 0.3), 180);
+  setTimeout(() => beep(784, 200, 0.3), 360);
+}
+function beepDone() {
+  beep(784, 200, 0.3);
+  setTimeout(() => beep(988, 200, 0.3), 220);
+  setTimeout(() => beep(1175, 300, 0.35), 440);
+}
+
+// ── Speech ──────────────────────────────────────────
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.1;
+    u.volume = 1;
+    speechSynthesis.speak(u);
+  }
+}
+
+function stopSpeech() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+// ── DOM refs ────────────────────────────────────────
+const $startScreen  = document.getElementById('start-screen');
+const $timerScreen  = document.getElementById('timer-screen');
+const $doneScreen   = document.getElementById('done-screen');
+const $exerciseName = document.getElementById('exercise-name');
+const $phaseLabel   = document.getElementById('phase-label');
+const $timerNumber  = document.getElementById('timer-number');
+const $setRepInfo   = document.getElementById('set-rep-info');
+const $ring         = document.getElementById('ring');
+const $progressBar  = document.getElementById('progress-bar');
+const $btnStart     = document.getElementById('btn-start');
+const $btnAgain     = document.getElementById('btn-again');
+const $btnPause     = document.getElementById('btn-pause');
+const $btnReset     = document.getElementById('btn-reset');
+const $totalTime    = document.getElementById('total-time');
+
+const RING_R = 104;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
+
+// Set SVG dasharray from JS so it matches exactly
+$ring.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
+$ring.setAttribute('stroke-dashoffset', '0');
+
+// ── State ───────────────────────────────────────────
+let steps = [];
+let cumulativeMs = null;
+let totalDuration = 0;
+let stepIndex = 0;
+let timeLeft = 0;
+let paused = false;
+let running = false;
+let lastTick = 0;
+let rafId = null;
+let startedAt = 0;
+let lastTickSecond = -1;
+let prevStepIndex = -1; // track step changes to avoid redundant DOM writes
+
+// ── Screen management ───────────────────────────────
+function showScreen(screen) {
+  $startScreen.style.display = 'none';
+  $timerScreen.style.display = 'none';
+  $doneScreen.style.display  = 'none';
+  screen.style.display = 'flex';
+}
+
+// ── Render ──────────────────────────────────────────
+function render() {
+  const step = steps[stepIndex];
+  if (!step) return;
+
+  // Only update text DOM when step changes
+  if (stepIndex !== prevStepIndex) {
+    prevStepIndex = stepIndex;
+    document.body.className = 'state-' + step.type;
+
+    $exerciseName.textContent = step.exercise;
+
+    if (step.type === 'transition') {
+      $phaseLabel.textContent = 'Get Ready';
+      $setRepInfo.textContent = `Set of ${step.set}  ·  Cycle ${step.cycle} / ${step.cycleTotal}`;
+    } else if (step.type === 'work') {
+      $phaseLabel.textContent = 'Hold';
+      $setRepInfo.textContent = `Set of ${step.set}  ·  Cycle ${step.cycle} / ${step.cycleTotal}`;
+    } else {
+      $phaseLabel.textContent = 'Rest';
+      $exerciseName.textContent = 'Next: ' + step.exercise;
+      $setRepInfo.textContent = `Set of ${step.set}  ·  Cycle ${step.cycle} / ${step.cycleTotal}`;
+    }
+  }
+
+  // Timer number — update every frame (cheap text update)
+  const secLeft = Math.ceil(timeLeft / 1000);
+  $timerNumber.textContent = secLeft;
+
+  // Ring progress
+  const frac = 1 - (timeLeft / (step.duration * 1000));
+  $ring.style.strokeDashoffset = RING_CIRCUMFERENCE * frac;
+
+  // Overall progress (O(1) with precomputed cumulative array)
+  const overallElapsed = cumulativeMs[stepIndex] + (step.duration * 1000 - timeLeft);
+  const pct = Math.min(100, (overallElapsed / totalDuration) * 100);
+  $progressBar.style.width = pct + '%';
+}
+
+// ── Timer loop ──────────────────────────────────────
+function tick(now) {
+  if (!running) return;
+  if (paused) {
+    lastTick = now;
+    rafId = requestAnimationFrame(tick);
+    return;
+  }
+
+  const dt = now - lastTick;
+  lastTick = now;
+  timeLeft -= dt;
+
+  // Countdown beeps for last 3 seconds
+  const secLeft = Math.ceil(timeLeft / 1000);
+  if (secLeft !== lastTickSecond && secLeft <= 3 && secLeft >= 1 && timeLeft > 0) {
+    beepTick();
+  }
+  lastTickSecond = secLeft;
+
+  // Advance steps, carrying over overshoot to prevent drift
+  while (timeLeft <= 0) {
+    stepIndex++;
+    if (stepIndex >= steps.length) {
+      finish();
+      return;
+    }
+    timeLeft += steps[stepIndex].duration * 1000; // carry overshoot
+    lastTickSecond = -1;
+    onStepStart();
+  }
+
+  render();
+  rafId = requestAnimationFrame(tick);
+}
+
+function onStepStart() {
+  const step = steps[stepIndex];
+
+  if (step.type === 'work') {
+    beepWork();
+    speak(step.exercise);
+  } else if (step.type === 'rest') {
+    beepRest();
+    speak('Rest');
+  } else if (step.type === 'transition') {
+    beepTransition();
+    speak(`Get ready. Set of ${step.set}. Cycle ${step.cycle}.`);
+  }
+}
+
+function finish() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  document.body.className = 'state-done';
+  showScreen($doneScreen);
+
+  const elapsed = Math.round((Date.now() - startedAt) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  $totalTime.textContent = `${m}:${String(s).padStart(2, '0')} total`;
+
+  beepDone();
+  speak('Workout complete. Great job!');
+  releaseWakeLock();
+}
+
+// ── Controls ────────────────────────────────────────
+function startWorkout() {
+  ensureAudio();
+  steps = buildSteps();
+  cumulativeMs = buildCumulativeMs(steps);
+  totalDuration = cumulativeMs[steps.length];
+  stepIndex = 0;
+  prevStepIndex = -1;
+  paused = false;
+  running = true;
+  startedAt = Date.now();
+
+  showScreen($timerScreen);
+  $btnPause.textContent = '⏸';
+
+  onStepStart();
+  timeLeft = steps[0].duration * 1000;
+  render();
+  lastTick = performance.now();
+  rafId = requestAnimationFrame(tick);
+  requestWakeLock();
+}
+
+function resetToStart() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  stopSpeech();
+  document.body.className = '';
+  showScreen($startScreen);
+  releaseWakeLock();
+}
+
+$btnStart.addEventListener('click', startWorkout);
+$btnAgain.addEventListener('click', startWorkout);
+
+$btnPause.addEventListener('click', () => {
+  paused = !paused;
+  $btnPause.textContent = paused ? '▶' : '⏸';
+  if (paused) {
+    stopSpeech();
+  }
+});
+
+$btnReset.addEventListener('click', resetToStart);
+
+// ── Wake Lock ───────────────────────────────────────
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  // Release stale lock before requesting a new one
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { /* user denied or not supported */ }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+
+// Re-acquire wake lock when tab becomes visible again (OS releases it on tab switch)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && running && !paused) requestWakeLock();
+});
+</script>
+</body>
+</html>
